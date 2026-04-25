@@ -1,7 +1,8 @@
 # omega-cov
 
-A token-level metric for detecting confabulation in LLM outputs via covariance
-of cosine displacement and Shannon surprise.
+A token-level signature for LLM outputs based on the covariance of cosine
+displacement and Shannon surprise. Calibrated on WikiBio to separate factual
+reference text from freely-generated continuations (AUC 0.918, n=491).
 
 ## What it does
 
@@ -14,9 +15,17 @@ open-weight LLM:
 - **A_cov** = A_joint − A_marginal — the covariance between displacement and
   surprise, which discriminates regimes that A_marginal cannot.
 
-The signature classification (`ALIGNED`, `MIXED`, `ANTI`) flags regions where
-surprise and displacement covary (signal) versus regions where surprise occurs
-without semantic movement (candidate confabulation).
+Each measurement is classified into one of three signatures:
+
+- **DENSE** — A_cov is high; surprise covaries tightly with displacement.
+  Factual, information-rich text typically lives here.
+- **WEAK** — A_cov is positive but low; surprise occurs without commensurate
+  displacement. Candidate confabulation.
+- **ANTI** — A_cov is negative; surprise and displacement actively oppose each
+  other. Pathological by definition; rare on standard generative text.
+
+The boundary between DENSE and WEAK is calibrated empirically and is **not**
+zero. The boundary between WEAK and ANTI is mathematical (`A_cov < 0`).
 
 ## Why
 
@@ -43,10 +52,10 @@ result = measure(
     model="mistralai/Mistral-7B-v0.1",
 )
 
-print(result.A_marginal)   # 2.0345
-print(result.A_joint)      # 2.1102
-print(result.A_cov)        # 0.0757
-print(result.signature)    # "ALIGNED"
+print(result.A_marginal)   # 1.987
+print(result.A_joint)      # 2.118
+print(result.A_cov)        # +0.131
+print(result.signature)    # "DENSE"
 ```
 
 For batch processing, load the model once:
@@ -60,6 +69,34 @@ for text in corpus:
     print(result.A_cov, result.signature)
 ```
 
+## Calibration
+
+v0.1 thresholds were calibrated on **WikiBio** (n=491 paired REF / GEN
+biographies, Mistral-7B-v0.1, seed=42).
+
+| Constant | v0.1 value | Source |
+| --- | --- | --- |
+| `THRESHOLD_DENSE` | `+0.069` | Youden's J optimum on WikiBio (REF vs GEN) |
+| `THRESHOLD_ANTI`  | `0.0`    | Mathematical: true anti-correlation |
+
+At `THRESHOLD_DENSE = +0.069`:
+
+- AUC ROC = **0.918**
+- Sensitivity (REF correctly identified) = 0.89
+- Specificity (GEN correctly flagged) = 0.79
+
+A note on naming. Even GEN samples — text generated freely by an LLM, where
+confabulation is plausible but not demonstrated by this experiment — sit
+mostly in positive A_cov territory (median +0.04). They are *weakly* covarying
+compared with REF, not anti-correlated. "WEAK" labels that empirical regime;
+"ANTI" is reserved for the rarer case where δ and σ actively oppose each
+other. The two boundaries are decoupled by construction —
+`THRESHOLD_DENSE` is empirical and per-model, `THRESHOLD_ANTI` is mathematical
+and universal.
+
+See [docs/calibration.md](docs/calibration.md) for the full methodology,
+distributions, and bootstrap confidence interval on the threshold.
+
 ## Requirements
 
 - Python ≥ 3.9
@@ -70,14 +107,27 @@ for text in corpus:
 
 ## Status
 
-Alpha. Default thresholds for `ALIGNED` / `MIXED` / `ANTI` (currently ±0.1)
-will be calibrated against TriviaQA and WikiBio corpora before v1.0.
+Alpha. v0.1 thresholds calibrated on WikiBio.
+
+TriviaQA was tested but deferred to v0.2: short-answer questions do not
+produce enough valid tokens under the default `sigma_min` filter (median
+generation length is too small once the entropy filter has run), so the
+calibration there was not statistically defensible.
+
+v0.2 milestones:
+
+- Cross-model recalibration of `THRESHOLD_DENSE` (Llama, Qwen, Gemma).
+- TriviaQA pipeline with adapted parameters.
+- Empirical evaluation of the WEAK / ANTI boundary on adversarial text.
 
 ## Limitations
 
 - Does not detect *consistent hallucinations* (the model always says X and X
   is wrong). `A_cov` measures dynamic coherence, not factual truth.
 - Requires access to logits and hidden states, ruling out closed-API models.
+- **Calibration is per-model.** `THRESHOLD_DENSE` was derived on
+  Mistral-7B-v0.1. Re-calibration is required before claiming the same
+  separation power on other architectures.
 - Cross-substrate stability tested on Mistral-7B and TinyLlama-1.1B
   (Pearson r ≈ 0.95 on 10 segments). Broader evaluation pending.
 
@@ -88,9 +138,8 @@ If you use this library in academic work, please cite:
 ```bibtex
 @software{baillif2026omegacov,
   author = {Novan Baillif},
-  title  = {omega-cov: A token-level metric for detecting confabulation in
-            LLM outputs via covariance of cosine displacement and Shannon
-            surprise},
+  title  = {omega-cov: A token-level signature for LLM outputs based on
+            covariance of cosine displacement and Shannon surprise},
   year   = {2026},
   url    = {https://github.com/NovanBaillif/omega-cov}
 }

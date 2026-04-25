@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 
 from omega_cov.core import compute_acov
+from omega_cov.thresholds import THRESHOLD_DENSE, THRESHOLD_ANTI
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -38,8 +39,8 @@ def test_identity_acov_equals_covariance(seed: int) -> None:
 # ─────────────────────────────────────────────────────────────────────────
 
 
-def test_aligned_regime() -> None:
-    """When delta correlates with sigma, A_cov > 0 and signature == ALIGNED."""
+def test_dense_regime() -> None:
+    """Strong positive covariance → A_cov >= THRESHOLD_DENSE → signature DENSE."""
     rng = np.random.default_rng(123)
     n = 500
     sigma = rng.uniform(1.5, 8, n)
@@ -47,13 +48,13 @@ def test_aligned_regime() -> None:
 
     result = compute_acov(delta, sigma)
     assert result is not None
-    assert result.A_cov > 0
-    assert result.signature == "ALIGNED"
+    assert result.A_cov >= THRESHOLD_DENSE
+    assert result.signature == "DENSE"
     assert result.pearson_rho > 0.5
 
 
 def test_anti_regime() -> None:
-    """When delta anti-correlates with sigma, A_cov < 0 and signature == ANTI."""
+    """True anti-correlation → A_cov < 0 → signature ANTI."""
     rng = np.random.default_rng(124)
     n = 500
     sigma = rng.uniform(1.5, 8, n)
@@ -61,22 +62,23 @@ def test_anti_regime() -> None:
 
     result = compute_acov(delta, sigma)
     assert result is not None
-    assert result.A_cov < 0
+    assert result.A_cov < THRESHOLD_ANTI
     assert result.signature == "ANTI"
     assert result.pearson_rho < -0.5
 
 
-def test_mixed_regime() -> None:
-    """When delta and sigma are independent, A_cov ~ 0 and signature == MIXED."""
+def test_weak_regime() -> None:
+    """Faint positive covariance → 0 <= A_cov < THRESHOLD_DENSE → signature WEAK."""
     rng = np.random.default_rng(125)
     n = 500
     sigma = rng.uniform(1.5, 8, n)
-    delta = rng.uniform(0.3, 0.7, n)  # independent of sigma
+    # Weak positive coupling — delta has a tiny linear dependence on sigma plus noise.
+    delta = np.clip(0.4 + 0.005 * sigma + rng.normal(0, 0.1, n), 0.001, 1.0)
 
     result = compute_acov(delta, sigma)
     assert result is not None
-    assert abs(result.A_cov) < 0.1
-    assert result.signature == "MIXED"
+    assert THRESHOLD_ANTI <= result.A_cov < THRESHOLD_DENSE
+    assert result.signature == "WEAK"
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -119,7 +121,7 @@ def test_pathological_same_marginals_different_joint() -> None:
 
     # Opposite signatures
     assert r1.signature == "ANTI"
-    assert r2.signature == "ALIGNED"
+    assert r2.signature == "DENSE"
 
 
 # ─────────────────────────────────────────────────────────────────────────

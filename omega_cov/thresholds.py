@@ -1,31 +1,43 @@
 """Signature classification thresholds.
 
-These thresholds determine which regime A_cov falls into.
+A_cov = cov(delta, sigma) splits into three regimes:
 
-Current values are placeholders set by inspection of synthetic data.
-They will be calibrated against TriviaQA and WikiBio before v1.0.
-The constants are isolated here so that calibration only requires
-updating this file.
+    DENSE  : A_cov >= THRESHOLD_DENSE
+             surprise and displacement covary tightly — the factual baseline.
+    WEAK   : THRESHOLD_ANTI <= A_cov < THRESHOLD_DENSE
+             surprise occurs without commensurate displacement — candidate
+             confabulation.
+    ANTI   : A_cov < THRESHOLD_ANTI
+             true anti-correlation — surprise and displacement actively
+             oppose each other. Pathological by definition; rare on
+             standard generative text.
+
+THRESHOLD_DENSE is calibrated empirically (it is the boundary between
+factual and confabulated text under a given model). THRESHOLD_ANTI is
+mathematical: A_cov < 0 means true anti-correlation regardless of model.
 """
 
-# Default thresholds (placeholder, to be calibrated).
-THRESHOLD_ALIGNED = 0.1
-THRESHOLD_ANTI = -0.1
+# Calibrated on WikiBio (n=491 paired REF/GEN, Mistral-7B-v0.1, seed=42).
+# Youden's J optimum, AUC = 0.918. See docs/calibration.md.
+THRESHOLD_DENSE = 0.069
+
+# Mathematical definition. Not calibrated.
+THRESHOLD_ANTI = 0.0
 
 
 def classify_signature(a_cov: float) -> str:
-    """Classify A_cov value into one of three regimes.
+    """Classify A_cov into DENSE / WEAK / ANTI.
 
     Args:
         a_cov: the covariance value to classify.
 
     Returns:
-        "ALIGNED" if a_cov > THRESHOLD_ALIGNED,
-        "ANTI"    if a_cov < THRESHOLD_ANTI,
-        "MIXED"   otherwise.
+        "DENSE" if a_cov >= THRESHOLD_DENSE,
+        "ANTI"  if a_cov <  THRESHOLD_ANTI,
+        "WEAK"  otherwise.
     """
-    if a_cov > THRESHOLD_ALIGNED:
-        return "ALIGNED"
+    if a_cov >= THRESHOLD_DENSE:
+        return "DENSE"
     if a_cov < THRESHOLD_ANTI:
         return "ANTI"
-    return "MIXED"
+    return "WEAK"

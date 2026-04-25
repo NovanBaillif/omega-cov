@@ -29,7 +29,7 @@ class MeasureResult:
         A_joint: mean(delta * sigma).
         A_cov: A_joint - A_marginal, equal to cov(delta, sigma).
         pearson_rho: Pearson correlation between delta and sigma.
-        signature: one of "ALIGNED", "MIXED", "ANTI" based on A_cov.
+        signature: one of "DENSE", "WEAK", "ANTI" based on A_cov.
     """
 
     n_tokens: int
