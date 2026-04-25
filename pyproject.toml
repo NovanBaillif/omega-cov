@@ -49,6 +49,7 @@ calibrate = [
     "accelerate>=0.30",
     "bitsandbytes>=0.43",
     "matplotlib>=3.7",
+    "scipy>=1.10",
 ]
 
 [project.urls]
