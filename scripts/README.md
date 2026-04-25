@@ -27,6 +27,10 @@ export ANTHROPIC_API_KEY=sk-ant-...
 `bitsandbytes` requires CUDA. On CPU/MPS the scripts still run but
 are too slow for n=1000.
 
+`datasets` is pinned to `<4.0` because the WikiBio HF dataset still
+relies on a loading script that newer datasets versions refuse to
+run. TriviaQA was migrated to Parquet upstream and works either way.
+
 ## Running
 
 ```bash
