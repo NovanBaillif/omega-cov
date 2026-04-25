@@ -160,6 +160,10 @@ def main():
     import anthropic
     from datasets import load_dataset
 
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
+
     print(f"Loading TriviaQA validation split (rc.nocontext)...")
     ds = load_dataset("trivia_qa", "rc.nocontext", split="validation",
                       trust_remote_code=True)

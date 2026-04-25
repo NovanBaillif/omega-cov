@@ -149,6 +149,10 @@ def main():
     import torch
     from datasets import load_dataset
 
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
+
     print(f"Loading WikiBio test split...")
     try:
         ds = load_dataset("wiki_bio", split="test", trust_remote_code=True)
