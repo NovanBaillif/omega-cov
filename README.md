@@ -92,7 +92,7 @@ If you use this library in academic work, please cite:
             LLM outputs via covariance of cosine displacement and Shannon
             surprise},
   year   = {2026},
-  url    = {https://github.com/nbaillif/omega-cov}
+  url    = {https://github.com/NovanBaillif/omega-cov}
 }
 ```
 

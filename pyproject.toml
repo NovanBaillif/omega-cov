@@ -45,9 +45,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/nbaillif/omega-cov"
-Documentation = "https://github.com/nbaillif/omega-cov/blob/main/docs/api.md"
-Issues = "https://github.com/nbaillif/omega-cov/issues"
+Homepage = "https://github.com/NovanBaillif/omega-cov"
+Documentation = "https://github.com/NovanBaillif/omega-cov/blob/main/docs/api.md"
+Issues = "https://github.com/NovanBaillif/omega-cov/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["omega_cov"]
