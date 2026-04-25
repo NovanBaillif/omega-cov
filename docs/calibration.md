@@ -188,7 +188,7 @@ auditability.
 
 | Date | Model | Seed | n_ref | n_gen | THRESHOLD_DENSE (Youden) | AUC | Commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-04-25 | mistralai/Mistral-7B-v0.1 (4-bit) | 42 | 491 | 491 | +0.0698 | 0.918 | _to be filled_ |
+| 2026-04-25 | mistralai/Mistral-7B-v0.1 (4-bit) | 42 | 491 | 491 | +0.0698 | 0.918 | b583f1e |
 
 ## Limitations of the v0.1 calibration
 
