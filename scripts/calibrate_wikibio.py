@@ -9,8 +9,10 @@ For each sample:
 Output: CSV with one row per (sample, source). Source is REF or GEN.
 
 The label column carries the source — it is the ground-truth split
-for the calibration: REF biographies are factual by construction;
-GEN biographies are at risk of confabulation.
+for the calibration: REF biographies are the human-written Wikipedia
+text; GEN biographies are Mistral-7B continuations of a name-only prompt.
+The calibration separates the two production regimes; it does not make
+a veracity claim about either.
 """
 
 from __future__ import annotations

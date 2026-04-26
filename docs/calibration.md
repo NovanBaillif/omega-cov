@@ -17,7 +17,7 @@ into three signatures:
 | Signature | Condition | Meaning |
 | --- | --- | --- |
 | `DENSE` | `A_cov >= THRESHOLD_DENSE` | Surprise covaries tightly with displacement. Factual, information-rich text. |
-| `WEAK`  | `THRESHOLD_ANTI <= A_cov < THRESHOLD_DENSE` | Positive but low covariance. Surprise without commensurate displacement — candidate confabulation. |
+| `WEAK`  | `THRESHOLD_ANTI <= A_cov < THRESHOLD_DENSE` | Positive but low covariance. Surprise without commensurate displacement. |
 | `ANTI`  | `A_cov < THRESHOLD_ANTI` | Surprise and displacement actively oppose each other. Pathological by definition; rare on standard generative text. |
 
 The two boundaries are decoupled by construction:
@@ -41,16 +41,15 @@ empirically what we observe:
 - 84.7 % of GEN samples have `A_cov > 0`.
 - The Youden-optimal threshold for separating them is **+0.069**, not 0.
 
-In other words, even GEN samples — text generated freely by an LLM, where
-confabulation is plausible but not demonstrated by this experiment — usually
-have *positive* covariance between δ and σ. They are *weakly* covarying
-compared with REF, not anti-correlated. The renaming reflects what the data
-actually shows:
+In other words, even GEN samples — text generated freely by an LLM — sit
+mostly in positive A_cov territory. The two production regimes (REF and GEN)
+sit at different points within the positive range; the boundary between them
+is empirical, not at zero. The renaming reflects what the data actually shows:
 
 - `DENSE` — high covariance regime (formerly `ALIGNED`)
 - `WEAK`  — low-but-positive covariance regime (formerly `MIXED`); empirically
-  this is where GEN sits, but the regime is defined by its A_cov range, not
-  by a confabulation claim
+  where GEN sits in the v0.1 calibration, but the regime is defined by its
+  A_cov range, not by a claim about the source
 - `ANTI`  — true anti-correlation, kept under its mathematical definition
 
 ## Methodology
@@ -212,11 +211,39 @@ auditability.
   shows that this filter is not always benign. Future work should
   characterise the filter's effect on different text length regimes.
 
-## v0.2 plans
+## v0.2 — TriviaQA: scope sanity check
+
+After v0.1, we tested whether `A_cov` separates correct from
+hallucinated answers within a single LLM's outputs — a different
+question from the v0.1 production-regime contrast.
+
+- Dataset: TriviaQA `rc.nocontext` validation, n=400, seed=43.
+- Model: Mistral-7B-v0.1 (4-bit), T=0.7, `min_new_tokens=30`,
+  `max_new_tokens=120`, "2-3 sentences with reasoning" prompt so
+  generations survive the `sigma_min=1.0` filter.
+- Labels: every generation judged by Claude Haiku 4.5 (T=0, JSON).
+- Binary subset: 17 ambiguous excluded, n=383 (189 correct, 194
+  hallucination).
+
+**Result: AUC = 0.515, 95% bootstrap CI [0.457, 0.575], two-sided
+Mann-Whitney p = 0.62.** `A_cov` does not separate correct from
+hallucinated answers in this setting.
+
+This is consistent with the metric's defined scope. `A_cov` measures
+the dynamic production signature of a text under a model — the
+covariance of cosine displacement and Shannon surprise across tokens.
+It is not a veracity test. The v0.1 calibration on WikiBio is a
+contrast between two production regimes (reference Wikipedia prose
+vs Mistral-7B free generation), not a contrast between true and false
+content.
+
+Raw data archived at `calibration/trivia_v2_results.csv`.
+
+## v0.3 plans
 
 - Cross-model recalibration of `THRESHOLD_DENSE` on Llama, Qwen, Gemma.
-- TriviaQA calibration with adapted parameters (longer-form prompts,
-  or a metric variant that lifts the `sigma_min` constraint).
+- Replication of the v0.2 conditional finding on additional QA corpora,
+  with length-controlled comparisons.
 - Empirical validation of the WEAK / ANTI boundary on adversarial
   text (deliberately broken or contradictory generations).
 - Per-domain thresholds (news, scientific writing) if cross-domain

@@ -1,8 +1,14 @@
 # omega-cov
 
-A token-level signature for LLM outputs based on the covariance of cosine
-displacement and Shannon surprise. Calibrated on WikiBio to separate factual
-reference text from freely-generated continuations (AUC 0.918, n=491).
+A token-level signature for LLM-produced text, based on the covariance of
+cosine displacement and Shannon surprise across tokens. Calibrated on WikiBio
+to separate two production regimes: human-written Wikipedia prose and
+Mistral-7B free generation (AUC 0.918, n=491).
+
+`A_cov` is a **production-regime signature**. It does not measure factual
+correctness, does not classify human-vs-AI authorship, and does not detect
+hallucination — see [Limitations](#limitations) and
+[docs/calibration.md](docs/calibration.md) for the empirical scope.
 
 ## What it does
 
@@ -15,26 +21,27 @@ open-weight LLM:
 - **A_cov** = A_joint − A_marginal — the covariance between displacement and
   surprise, which discriminates regimes that A_marginal cannot.
 
-Each measurement is classified into one of three signatures:
+Each measurement is classified into one of three signatures, defined by
+where `A_cov` falls relative to two thresholds:
 
-- **DENSE** — A_cov is high; surprise covaries tightly with displacement.
-  Factual, information-rich text typically lives here.
-- **WEAK** — A_cov is positive but low; surprise occurs without commensurate
-  displacement. Candidate confabulation.
-- **ANTI** — A_cov is negative; surprise and displacement actively oppose each
-  other. Pathological by definition; rare on standard generative text.
+- **DENSE** — `A_cov >= THRESHOLD_DENSE`. Surprise covaries tightly with
+  displacement.
+- **WEAK** — `THRESHOLD_ANTI <= A_cov < THRESHOLD_DENSE`. Positive but low
+  covariance; surprise occurs without commensurate displacement.
+- **ANTI** — `A_cov < THRESHOLD_ANTI`. Surprise and displacement actively
+  oppose each other. Pathological by definition; rare on standard text.
 
-The boundary between DENSE and WEAK is calibrated empirically and is **not**
-zero. The boundary between WEAK and ANTI is mathematical (`A_cov < 0`).
+The DENSE / WEAK boundary is calibrated empirically and is **not** zero.
+The WEAK / ANTI boundary is mathematical (`A_cov < 0`).
 
 ## Why
 
 Standard metrics measure surprise (perplexity) and displacement (cosine drift)
 separately, or product their averages. Two sequences with identical mean
 surprise and mean displacement can have opposite token-by-token dynamics — one
-where each surprising token moves meaning, one where surprise is stylistic and
-no real movement occurs. `A_cov` separates these cases in a single forward
-pass, without sampling multiple generations or training a probe.
+where each surprising token moves the hidden state, one where surprise occurs
+without commensurate movement. `A_cov` separates these cases in a single
+forward pass, without sampling multiple generations or training a probe.
 
 ## Install
 
@@ -72,27 +79,33 @@ for text in corpus:
 ## Calibration
 
 v0.1 thresholds were calibrated on **WikiBio** (n=491 paired REF / GEN
-biographies, Mistral-7B-v0.1, seed=42).
+samples, Mistral-7B-v0.1, seed=42).
 
 | Constant | v0.1 value | Source |
 | --- | --- | --- |
-| `THRESHOLD_DENSE` | `+0.069` | Youden's J optimum on WikiBio (REF vs GEN) |
+| `THRESHOLD_DENSE` | `+0.069` | Youden's J optimum on WikiBio REF vs GEN |
 | `THRESHOLD_ANTI`  | `0.0`    | Mathematical: true anti-correlation |
+
+The two classes in v0.1 are defined by *production source*, not by truth:
+
+- **REF** — the human-written Wikipedia biography text in the WikiBio
+  dataset.
+- **GEN** — Mistral-7B continuation of the prompt
+  `"Write a 150-word biography of <name>"`.
 
 At `THRESHOLD_DENSE = +0.069`:
 
-- AUC ROC = **0.918**
-- Sensitivity (REF correctly identified) = 0.89
-- Specificity (GEN correctly flagged) = 0.79
+- AUC ROC = **0.918** separating REF from GEN
+- Sensitivity = 0.89 (REF samples above the threshold)
+- Specificity = 0.79 (GEN samples below the threshold)
 
-A note on naming. Even GEN samples — text generated freely by an LLM, where
-confabulation is plausible but not demonstrated by this experiment — sit
-mostly in positive A_cov territory (median +0.04). They are *weakly* covarying
-compared with REF, not anti-correlated. "WEAK" labels that empirical regime;
-"ANTI" is reserved for the rarer case where δ and σ actively oppose each
-other. The two boundaries are decoupled by construction —
-`THRESHOLD_DENSE` is empirical and per-model, `THRESHOLD_ANTI` is mathematical
-and universal.
+This separates two production regimes. It is not a veracity claim
+about either source — only that the two sit in different parts of
+the A_cov distribution as measured by Mistral-7B.
+
+Even GEN samples sit mostly in positive A_cov territory (median +0.04).
+"WEAK" labels that empirical regime; "ANTI" is reserved for the rarer
+case where δ and σ actively oppose each other.
 
 See [docs/calibration.md](docs/calibration.md) for the full methodology,
 distributions, and bootstrap confidence interval on the threshold.
@@ -107,27 +120,29 @@ distributions, and bootstrap confidence interval on the threshold.
 
 ## Status
 
-Alpha. v0.1 thresholds calibrated on WikiBio.
+Alpha. v0.1 thresholds calibrated on WikiBio. v0.2 added a sanity check on
+TriviaQA: `A_cov` does **not** separate correct from hallucinated answers
+within a single LLM's outputs (AUC 0.515, n=383). This is consistent with
+the metric's defined scope — `A_cov` is a production-regime signature, not
+a veracity test.
 
-TriviaQA was tested but deferred to v0.2: short-answer questions do not
-produce enough valid tokens under the default `sigma_min` filter (median
-generation length is too small once the entropy filter has run), so the
-calibration there was not statistically defensible.
+v0.3 milestones:
 
-v0.2 milestones:
-
-- Cross-model recalibration of `THRESHOLD_DENSE` (Llama, Qwen, Gemma).
-- TriviaQA pipeline with adapted parameters.
-- Empirical evaluation of the WEAK / ANTI boundary on adversarial text.
+- Cross-model recalibration of `THRESHOLD_DENSE` on Llama, Qwen, Gemma.
+- Empirical validation of the WEAK / ANTI boundary on adversarial text
+  (deliberately broken or contradictory generations).
+- Per-domain thresholds (news, scientific writing) if cross-domain drift
+  on `THRESHOLD_DENSE` exceeds the bootstrap CI.
 
 ## Limitations
 
-- Does not detect *consistent hallucinations* (the model always says X and X
-  is wrong). `A_cov` measures dynamic coherence, not factual truth.
+- `A_cov` is a production-regime signature. It does **not** measure factual
+  correctness, does **not** classify human-vs-AI authorship, and does **not**
+  detect hallucination.
 - Requires access to logits and hidden states, ruling out closed-API models.
 - **Calibration is per-model.** `THRESHOLD_DENSE` was derived on
   Mistral-7B-v0.1. Re-calibration is required before claiming the same
-  separation power on other architectures.
+  separation on other architectures.
 - Cross-substrate stability tested on Mistral-7B and TinyLlama-1.1B
   (Pearson r ≈ 0.95 on 10 segments). Broader evaluation pending.
 

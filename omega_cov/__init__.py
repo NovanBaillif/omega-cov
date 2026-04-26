@@ -1,5 +1,8 @@
-"""omega-cov: A token-level metric for detecting confabulation in LLM outputs
-via covariance of cosine displacement and Shannon surprise.
+"""omega-cov: A token-level signature for LLM outputs based on the covariance
+of cosine displacement and Shannon surprise.
+
+A_cov is a production-regime signature, not a veracity test. See README and
+docs/calibration.md for the empirical scope.
 
 Public API:
     measure(text, model)    : one-shot measurement

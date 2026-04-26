@@ -63,10 +63,9 @@ runtime resets entirely, mount Google Drive and pass
 
 The label is the **source**, no external annotation needed:
 
-- `REF` — the reference biography text from WikiBio (factual by
-  construction).
+- `REF` — the human-written biography text from WikiBio.
 - `GEN` — Mistral-7B continuation of
-  `"Write a 150-word biography of <name>"` (potential confabulation).
+  `"Write a 150-word biography of <name>"`.
 
 The threshold separating them empirically is what we call
 `THRESHOLD_DENSE`.

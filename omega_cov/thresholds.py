@@ -3,17 +3,17 @@
 A_cov = cov(delta, sigma) splits into three regimes:
 
     DENSE  : A_cov >= THRESHOLD_DENSE
-             surprise and displacement covary tightly — the factual baseline.
+             surprise and displacement covary tightly.
     WEAK   : THRESHOLD_ANTI <= A_cov < THRESHOLD_DENSE
-             surprise occurs without commensurate displacement — candidate
-             confabulation.
+             positive but low covariance; surprise occurs without
+             commensurate displacement.
     ANTI   : A_cov < THRESHOLD_ANTI
              true anti-correlation — surprise and displacement actively
              oppose each other. Pathological by definition; rare on
              standard generative text.
 
-THRESHOLD_DENSE is calibrated empirically (it is the boundary between
-factual and confabulated text under a given model). THRESHOLD_ANTI is
+THRESHOLD_DENSE is calibrated empirically per model — it is the boundary
+between two production regimes under a given model. THRESHOLD_ANTI is
 mathematical: A_cov < 0 means true anti-correlation regardless of model.
 """
 

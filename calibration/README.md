@@ -7,10 +7,11 @@ Raw outputs of the v0.1 threshold calibration. See
 
 | File | Description |
 | --- | --- |
-| `wikibio_results.csv` | Raw `calibrate_wikibio.py` output. One row per (sample, source). 982 rows = 491 REF + 491 GEN. |
+| `wikibio_results.csv` | Raw `calibrate_wikibio.py` output. One row per (sample, source). 982 rows = 491 REF + 491 GEN. v0.1 calibration source. |
 | `wikibio_paired.csv` | Same data pivoted to one row per sample (sample_id, A_cov_ref, A_cov_gen, signature_ref, signature_gen). 491 rows. |
 | `wikibio_histograms.png` | A_cov distribution plot, REF vs GEN, 30 bins. |
-| `trivia_partial_archived.csv` | TriviaQA partial run, 57 labelled samples on n=100. Archived for provenance only — **not used for calibration** (skip rate too high, see docs/calibration.md). |
+| `trivia_v2_results.csv` | Raw `calibrate_trivia_v2.py` output. 400 rows (189 correct + 194 hallucination + 17 ambiguous). v0.2 sanity-check data — confirms A_cov does not separate verdicts (AUC 0.515). |
+| `trivia_partial_archived.csv` | v0.1-era TriviaQA partial run, 57 labelled samples on n=100. Archived for provenance only — **not used for any calibration** (skip rate too high; superseded by v2). |
 
 ## Provenance
 
